@@ -2,12 +2,27 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <style>
-        :root { --pk-dark: #202020; --pk-light: #f8f8f8; --pk-green: #38b000; }
+        :root {
+            --pk-dark: #202020;
+            --pk-light: #f8f8f8;
+            --pk-green: #38b000;
+            --pk-yellow: #f2c94c;
+            --pk-red: #d62828;
+        }
         body { background-color: #8c8c8c; font-family: 'VT323', monospace; display: flex; justify-content: center; padding: 20px; }
-        #game-container { width: 450px; background: var(--pk-light); border: 6px solid var(--pk-dark); border-radius: 10px; padding: 15px; }
+        #game-container { width: min(450px, 100%); background: var(--pk-light); border: 6px solid var(--pk-dark); border-radius: 10px; padding: 15px; }
+        .status-panel { border: 3px solid var(--pk-dark); background: #fff; padding: 8px; margin-bottom: 10px; display: grid; gap: 6px; }
+        .status-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 1.25rem; }
+        .status-label { display: flex; align-items: center; gap: 6px; }
+        .status-dot { width: 12px; height: 12px; border: 2px solid var(--pk-dark); background: var(--pk-yellow); display: inline-block; }
+        .status-value { text-align: right; }
+        .status-ok .status-dot { background: var(--pk-green); }
+        .status-error .status-dot { background: var(--pk-red); }
+        .status-wait .status-dot { background: var(--pk-yellow); }
         .screen { background-color: #e0f8d0; border: 3px solid var(--pk-dark); padding: 10px; min-height: 150px; margin-bottom: 10px; }
         .skill-box { border: 2px solid var(--pk-dark); margin: 5px 0; padding: 8px; background: rgba(255,255,255,0.5); display: flex; justify-content: space-between; align-items: center; }
         .locked { background: #b0b0b0; opacity: 0.7; }
@@ -19,6 +34,16 @@
 <body>
 <div id="game-container">
     <h2 style="text-align:center; margin-top:0;">HABILIDADES RPG</h2>
+    <div class="status-panel" aria-label="Estado del sistema">
+        <div class="status-row status-wait" id="server-status">
+            <span class="status-label"><span class="status-dot"></span>Servidor</span>
+            <span class="status-value" id="server-status-text">Conectando...</span>
+        </div>
+        <div class="status-row status-wait" id="db-status">
+            <span class="status-label"><span class="status-dot"></span>Base de datos</span>
+            <span class="status-value" id="db-status-text">Sin comprobar</span>
+        </div>
+    </div>
     <div class="screen" id="skill-tree">
         <div class="skill-box">
             <span>CORTE (Nvl <span id="nvl-1">3</span>)</span>
@@ -34,16 +59,52 @@
 <script>
     const socket = io();
     const idPersonaje = 1;
+    const serverStatus = document.getElementById('server-status');
+    const serverStatusText = document.getElementById('server-status-text');
+    const dbStatus = document.getElementById('db-status');
+    const dbStatusText = document.getElementById('db-status-text');
+
+    function setStatus(element, textElement, state, text) {
+        element.classList.remove('status-ok', 'status-error', 'status-wait');
+        element.classList.add(`status-${state}`);
+        textElement.innerText = text;
+    }
+
+    function setDatabaseStatus(state, text) {
+        setStatus(dbStatus, dbStatusText, state, text);
+    }
 
     function subirHabilidad(idHabilidad) {
+        setDatabaseStatus('wait', 'Consultando...');
         socket.emit('mejorar_habilidad', {
             id_personaje: idPersonaje,
             id_habilidad: idHabilidad
         });
     }
 
+    socket.on('connect', () => {
+        setStatus(serverStatus, serverStatusText, 'ok', 'Conectado');
+        if (dbStatusText.innerText === 'Sin comprobar') {
+            setDatabaseStatus('wait', 'Sin comprobar');
+        }
+    });
+
+    socket.on('disconnect', () => {
+        setStatus(serverStatus, serverStatusText, 'error', 'Desconectado');
+        setDatabaseStatus('wait', 'Sin comprobar');
+    });
+
+    socket.io.on('reconnect_attempt', () => {
+        setStatus(serverStatus, serverStatusText, 'wait', 'Reconectando...');
+    });
+
+    socket.io.on('reconnect_error', () => {
+        setStatus(serverStatus, serverStatusText, 'error', 'Sin respuesta');
+    });
+
     socket.on('status', (data) => {
         document.getElementById('log').innerText = "> " + data.mensaje;
+        setDatabaseStatus('ok', data.ok ? 'Operativa' : 'Respondió');
     });
 </script>
 </body>
