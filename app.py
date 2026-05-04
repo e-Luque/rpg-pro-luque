@@ -1,13 +1,12 @@
-from database.conexion_db import ConexionDB
 from flask import Flask, render_template
 from flask_socketio import SocketIO, emit
-from models.logic import Guerrero, Mago, Personaje, Raza
+from models.logic import Guerrero, Mago
 from database.personajeDAO import PersonajeDAO
 from database.HabilidadDAO import HabilidadDAO
 from database.InventarioDAO import InventarioDAO
 
 app = Flask(__name__)
-socketio = SocketIO(app, cors_allowed_origins="*")
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
 
 
 # ============================================================
@@ -30,6 +29,7 @@ def mejorar_habilidad(data):
     """
     data = { 'id_personaje': 1, 'id_habilidad': 2 }
     """
+    data = data or {}
     id_personaje = data.get('id_personaje')
     id_habilidad = data.get('id_habilidad')
 
@@ -58,8 +58,13 @@ def atacar(data):
     """
     data = { 'id_personaje': 1, 'id_objetivo': 2 }
     """
+    data = data or {}
     id_personaje = data.get('id_personaje')
     id_objetivo  = data.get('id_objetivo')
+
+    if not id_personaje or not id_objetivo:
+        emit('status', {'ok': False, 'mensaje': 'Faltan datos: necesito id_personaje e id_objetivo.'})
+        return
 
     # Sacamos los datos del personaje que ataca
     dao = PersonajeDAO()
@@ -123,6 +128,7 @@ def comprar_item(data):
     """
     data = { 'id_personaje': 1, 'nombre_item': 'Poción de Vida', 'precio': 50 }
     """
+    data = data or {}
     id_personaje = data.get('id_personaje')
     nombre_item  = data.get('nombre_item')
     precio       = data.get('precio')
@@ -143,4 +149,4 @@ def comprar_item(data):
 # ============================================================
 
 if __name__ == '__main__':
-    socketio.run(app, host='0.0.0.0', port=5000, debug=True)
+    socketio.run(app, host='0.0.0.0', port=5000, debug=True, allow_unsafe_werkzeug=True)

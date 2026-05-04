@@ -1,40 +1,46 @@
 from database.conexion_db import ConexionDB
 
 
-# Asumo que tienes una clase Personaje definida en otro archivo
-from modelos.personaje import Personaje
-
 class PersonajeDAO(ConexionDB):
     def __init__(self):
-        # ¡Súper importante! Llamamos al constructor del padre para activar la conexión
         super().__init__()
         self.lista_personajes = []
 
+    def obtener_por_id(self, id_personaje):
+        self.cursor.execute("""
+            SELECT
+                p.id,
+                p.nombre,
+                p.nivel,
+                p.exp,
+                p.oro,
+                p.vida_actual,
+                r.nombre AS raza,
+                c.nombre AS clase
+            FROM Personajes p
+            LEFT JOIN Razas r ON p.id_raza = r.id
+            LEFT JOIN Clases_RPG c ON p.id_clase = c.id
+            WHERE p.id = %s
+        """, (id_personaje,))
+        return self.cursor.fetchone()
+
     def cargarPersonajes(self):
         self.cursor.execute("""
-                            SELECT 
-    p.id,
-    p.nombre,
-    p.nivel,
-    p.vida_max AS vida,
-    r.nombre AS raza,
-    c.nombre AS clase
-FROM Personajes p
-LEFT JOIN Razas r ON p.id_raza = r.id
-LEFT JOIN Clases_RPG c ON p.id_clase = c.id;
-                            """)
-        self.lista_personajes = []
-
-        for row in self.cursor.fetchall():
-            nuevo_p = Personaje(
-                id=row[0],
-                nombre=row[1],
-                nivel=row[2],
-                vida_max=row[3],
-                raza=row[4],
-                clase=row[5],
-            )
-            self.lista_personajes.append(nuevo_p)
+            SELECT
+                p.id,
+                p.nombre,
+                p.nivel,
+                p.exp,
+                p.oro,
+                p.vida_actual,
+                r.nombre AS raza,
+                c.nombre AS clase
+            FROM Personajes p
+            LEFT JOIN Razas r ON p.id_raza = r.id
+            LEFT JOIN Clases_RPG c ON p.id_clase = c.id
+            ORDER BY p.id
+        """)
+        self.lista_personajes = self.cursor.fetchall()
 
         return self.lista_personajes
 

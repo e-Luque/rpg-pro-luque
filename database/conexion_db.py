@@ -1,36 +1,47 @@
+import os
+
 import psycopg2
-from psycopg2 import extras
 
 
 class ConexionDB:  # En Python usamos PascalCase para clases, como en Java
     def __init__(self):
+        self.database_url = os.getenv("DATABASE_URL")
         self.config = {
-            "host": "rpg_game",
-            "database": "rpg_game",
-            "user": "admin",
-            "password": "password123",
-            "port": 5432
+            "host": os.getenv("POSTGRES_HOST", "localhost"),
+            "database": os.getenv("POSTGRES_DB", "rpg_db"),
+            "user": os.getenv("POSTGRES_USER", "rpguser"),
+            "password": os.getenv("POSTGRES_PASSWORD", "rpgpassword"),
+            "port": int(os.getenv("POSTGRES_PORT", "5432")),
         }
-        self.connection = None  # El equivalente a declarar un campo 'private Connection conn;'
+        self.connection = None
+        self.conn = None
+        self.cursor = None
+        self.conectar()
 
     def conectar(self):
         try:
-            # Guardamos la conexión en 'self' para que sea global a la clase
-            self.connection = psycopg2.connect(**self.config)
-            print("Conectado con éxito al servidor")
+            if self.database_url:
+                self.connection = psycopg2.connect(self.database_url)
+            else:
+                self.connection = psycopg2.connect(**self.config)
+
+            self.conn = self.connection
+            self.cursor = self.connection.cursor()
         except psycopg2.Error as e:
             print(f"Error tipo SQLException: {e}")
+            raise
 
     def ejecutar(self, consulta, parametros=None):
-        # 1. Usamos el 'self.connection' que creamos en conectar()
-        # 2. El 'with' funciona como el "Try-with-resources" de Java 7+
-        #    Cierra el cursor automáticamente al terminar.
-        with self.connection.cursor(cursor_factory=extras.DictCursor) as cursor:
+        with self.connection.cursor() as cursor:
             cursor.execute(consulta, parametros)
 
-            # Si la consulta es un SELECT, devolvemos los datos
             if cursor.description:
                 return cursor.fetchall()
 
-            # Si es un INSERT/UPDATE, hacemos el commit (como en JDBC)
             self.connection.commit()
+
+    def cerrar(self):
+        if self.cursor and not self.cursor.closed:
+            self.cursor.close()
+        if self.connection and not self.connection.closed:
+            self.connection.close()

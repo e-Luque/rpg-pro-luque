@@ -33,8 +33,18 @@
 </div>
 <script>
     const socket = io();
-    function subirHabilidad(id) { socket.emit('mejorar_habilidad', {id: id}); }
-    socket.on('status', (data) => { document.getElementById('log').innerText = "> " + data.msg; });
+    const idPersonaje = 1;
+
+    function subirHabilidad(idHabilidad) {
+        socket.emit('mejorar_habilidad', {
+            id_personaje: idPersonaje,
+            id_habilidad: idHabilidad
+        });
+    }
+
+    socket.on('status', (data) => {
+        document.getElementById('log').innerText = "> " + data.mensaje;
+    });
 </script>
 </body>
 </html>
