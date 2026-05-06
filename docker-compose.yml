@@ -23,7 +23,7 @@ services:
     build: .
     restart: unless-stopped
     ports:
-      - "5001:5000"
+      - "5000:5000"
     volumes:
       # MAPEADO EN TIEMPO REAL:
       # El punto "." es tu carpeta actual en el host.

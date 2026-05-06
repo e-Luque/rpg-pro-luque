@@ -1,47 +1,49 @@
-import os
+from contextlib import contextmanager
+from email import contentmanager
 
 import psycopg2
+import os
 
+class conexion_db():
 
-class ConexionDB:  # En Python usamos PascalCase para clases, como en Java
-    def __init__(self):
-        self.database_url = os.getenv("DATABASE_URL")
-        self.config = {
-            "host": os.getenv("POSTGRES_HOST", "localhost"),
-            "database": os.getenv("POSTGRES_DB", "rpg_db"),
-            "user": os.getenv("POSTGRES_USER", "rpguser"),
-            "password": os.getenv("POSTGRES_PASSWORD", "rpgpassword"),
-            "port": int(os.getenv("POSTGRES_PORT", "5432")),
-        }
-        self.connection = None
-        self.conn = None
-        self.cursor = None
-        self.conectar()
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://rpguser:rpgpassword@db:5432/rpg_db")
 
-    def conectar(self):
-        try:
-            if self.database_url:
-                self.connection = psycopg2.connect(self.database_url)
-            else:
-                self.connection = psycopg2.connect(**self.config)
+@contextmanager
+def get_db_connection():
+    """
+    Administrador de contexto para la gestión de recursos de base de datos.
+    Permite el uso de la sentencia 'with' para automatizar la apertura y cierre.
+    """
+    conn = None
+    try:
+        # Establece la conexión utilizando los parámetros definidos en DATABASE_URL.
+        conn = psycopg2.connect(DATABASE_URL)
+        print("🔗 Conexión abierta")
 
-            self.conn = self.connection
-            self.cursor = self.connection.cursor()
-        except psycopg2.Error as e:
-            print(f"Error tipo SQLException: {e}")
-            raise
+        # Cede el objeto de conexión al bloque de código solicitante y pausa la ejecución.
+        yield conn
 
-    def ejecutar(self, consulta, parametros=None):
-        with self.connection.cursor() as cursor:
-            cursor.execute(consulta, parametros)
+    except Exception as e:
+        # Captura cualquier excepción ocurrida durante la conexión o ejecución.
+        print(f"❌ Error al conectar: {e}")
+        # Muestra la URL de conexión para facilitar la depuración técnica.
+        print(f"DEBUG: Intentando conectar a -> {DATABASE_URL}")
 
-            if cursor.description:
-                return cursor.fetchall()
+        # Propaga la excepción hacia las capas superiores para notificar el fallo.
+        raise e
 
-            self.connection.commit()
+    finally:
+        # Bloque de finalización obligatoria: se ejecuta siempre, haya error o éxito.
+        if conn is not None:
+            # Libera el recurso y cierra la conexión con el servidor PostgreSQL.
+            conn.close()
+            print("🔌 Conexión cerrada automáticamente")
 
-    def cerrar(self):
-        if self.cursor and not self.cursor.closed:
-            self.cursor.close()
-        if self.connection and not self.connection.closed:
-            self.connection.close()
+# PROBAR CONEXIÓN:
+if __name__ == "__main__":
+    try:
+        conn = get_db_connection()
+        print("✅ Conexión exitosa a la base de datos")
+        conn.close()
+    except Exception as e:
+        print(f"❌ Error de conexión: {e}")
