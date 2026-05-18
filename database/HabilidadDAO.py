@@ -42,8 +42,6 @@ class HabilidadDAO(ConexionDB):
                 h.descripcion,
                 h.tipo,
                 h.nivel_maximo,
-                h.costo_mana,
-                h.dano_base,
                 c.nombre AS clase,
                 COALESCE(ph.nivel_actual, 0) AS nivel_actual,
                 req.id AS requisito_id,
@@ -72,8 +70,6 @@ class HabilidadDAO(ConexionDB):
                 descripcion,
                 tipo,
                 nivel_maximo,
-                costo_mana,
-                dano_base,
                 clase,
                 nivel_actual,
                 requisito_id,
@@ -89,8 +85,6 @@ class HabilidadDAO(ConexionDB):
                     'descripcion': descripcion,
                     'tipo': tipo,
                     'nivel_maximo': nivel_maximo,
-                    'costo_mana': costo_mana,
-                    'dano_base': dano_base,
                     'clase': clase or 'General',
                     'nivel_actual': nivel_actual,
                     'requisitos': [],
@@ -98,7 +92,6 @@ class HabilidadDAO(ConexionDB):
 
             if requisito_id is not None:
                 habilidades[id_habilidad]['requisitos'].append({
-                    'id': requisito_id,
                     'nombre': requisito_nombre,
                     'nivel_actual': requisito_nivel_actual,
                     'nivel_necesario': requisito_nivel_maximo,
@@ -145,5 +138,4 @@ class HabilidadDAO(ConexionDB):
         self.conn.commit()
 
         return {'ok': True, 'mensaje': f'Habilidad mejorada al nivel {nuevo_nivel}.'}
-
 

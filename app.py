@@ -62,12 +62,13 @@ def api_items():
 
     return jsonify(items)
 
+
+
 @app.route('/api/habilidades/<int:id_personaje>')
 def obtener_habilidades(id_personaje):
     habilidades = HabilidadDAO().obtener_arbol(id_personaje)
 
     return jsonify({
-        "ok": True,
         "habilidades": habilidades
     })
 @socketio.on('mejorar_habilidad')
