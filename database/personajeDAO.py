@@ -1,4 +1,7 @@
 
+from database.conexion_db import ConexionDB
+
+
 class PersonajeDAO(ConexionDB):
     def __init__(self):
         super().__init__()
